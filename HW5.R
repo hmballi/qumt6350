@@ -87,13 +87,32 @@ plot(ctreeTune$finalModel)
 testResults$cTree <- predict(ctreeTune, xTest)
 
 #bagged trees
+set.seed(seed)
+ctreebag <- caret::train(x = xTrain[, -20], y = yTrain,
+                  method = "treebag",
+                  preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "zv", "nzv"),
+                  nbagg = 50,  
+                  trControl = ctrl)
+
+ctreebag
 
 #random forest
-
-#gradient boosting machines
+set.seed(seed)
+crandomforest <- caret::train(x = xTrain[, -20], y = yTrain, 
+                       method = "rf", 
+                       preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
+                       trControl = ctrl)
+crandomforest
+#boosted trees
+set.seed(seed)
+cgbm <- caret::train(x = xTrain[, -20], y = yTrain, 
+              method = "gbm", 
+              preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
+              trControl = ctrl, verbose = FALSE)
+cgbm
 
 #c5.0
-
+oneTree <- C5.0(
 #boosted c5.0
 
 # eXtreme Gradient Boosting Tree 
@@ -106,7 +125,7 @@ ctrl2 <- trainControl(method = "LGOCV",
                      savePredictions = TRUE)
 
 set.seed(seed)
-modelXGBT <- train(x = xTrain, y = yTrain, 
+modelXGBT <- train(x = xTrain[, -20], y = yTrain, 
                    method = "xgbTree",
                    preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "zv", "nzv"),
                    trControl = ctrl2)
