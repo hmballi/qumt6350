@@ -112,9 +112,7 @@ cgbm #accuracy = .84, kappa = .44
 
 #c5.0
 str(x)
-??churn
-?c5.0
-?C5.0.formula
+
 set.seed(seed)
 c50Grid <- expand.grid(trials = c(1:5), 
                        model = c("tree", "rules"),
@@ -123,30 +121,18 @@ set.seed(seed)
 c50Fit <- train(x = xTrain[, -20],
                 y = yTrain,
                 method = "C5.0",
-                preProc=c("center", "scale", "YeoJohnson", "corr", "spatialSign", "zv", "nzv"),
+                preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "zv", "nzv"),
                 tuneGrid = c50Grid,
                 verbose = FALSE,
                 metric = "Accuracy",
                 trControl = ctrl)
-c50Fit
+c50Fit #accuracy = .87, kappa = .55
 
 c50Fit$pred <- merge(c50Fit$pred,  c50Fit$bestTune)
 c50Fit$pred
 c50CM <- confusionMatrix(c50Fit, norm = "none")
-c50CM
+c50CM #accuract = .87
 
-#OR
-
-oneTree <- C5.0(x = xTrain[,-20], y = yTrain,
-              method = "c5.0",
-              preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
-              trControl = ctrl)
-oneTree
-#issues here, incorrect # of dimensions                
-oneTreePred <- predict(oneTree, y)
-oneTreeProbs <- predict(oneTree, y, type = "prob")
-postResample(oneTreePred, y$churn)
-  
 #boosted c5.0
 set.seed(seed)
 C5Boost <- C5.0(x = xTrain[, -20],
@@ -198,13 +184,8 @@ modelXGBL <- train(x = xTrain[,-20], y = yTrain,
 modelXGBL #RMSE = , R^2 = , MAE = 
 
 #catboost
-library(catboost)
-set.seed(seed)
-churncatboost <- caret::train(x = xTrain, y = yTrain,
-                              method = "catboost.caret",
-                              trcontrol = ctrl2,
-                              tunegrid = param,
-                              metric = "ROC") 
+#not available
+
 # Finalize Model
 library(Cubist)
 # prepare the data transform using training data
@@ -213,7 +194,7 @@ x <- xTrain[,-20]
 y <- yTrain
 preprocessParams <- preProcess(x, method = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"))
 trans_x <- predict(preprocessParams, x)
-
+summary(trans_x)
 
 # train the final model
 finalModel <- cubist(x = trans_x, y = y, committees = 18)
@@ -226,7 +207,7 @@ trans_val_x <- predict(preprocessParams, val_x)
 val_y <- yTest
 
 # use final model to make predictions on the test dataset
-predictions <- predict(finalModel, newdata=trans_val_x, neighbors=3)
+predictions <- predict(finalModel, newdata = trans_val_x, neighbors = 3)
 
 # calculate RMSE
 rmse <- RMSE(predictions, val_y)
@@ -234,9 +215,9 @@ print(rmse)
 
 #caret ensemble
 # define training control
-control <- trainControl(method="repeatedcv", number=10, repeats=3, 
-                        index=createResample(xTrain, 10),
-                        savePredictions="final")
+control <- trainControl(method = "repeatedcv", number = 10, repeats = 3, 
+                        index = createResample(xTrain, 10),
+                        savePredictions = "final")
 
 
 # train a list of models
@@ -246,113 +227,113 @@ algorithmList <- c('lm', 'glm', 'svmRadial','rpart', 'knn', 'ridge','rf','gbm','
 
 
 models <- caretList(x = xTrain[, -20], y = yTrain, 
-                    trControl=control,
-                    preProc=c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
-                    methodList=algorithmList)
+                    trControl = control,
+                    preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
+                    methodList = algorithmList)
 
-results<-resamples(models)
+results <- resamples(models)
 
 summary(results)
 dotplot(results)
 modelCor(results)
 
  
-model_list= c( 'glm', 'rpart', 'knn', 'rf','gbm')
+model_list = c( 'glm', 'rpart', 'knn', 'rf','gbm')
 
 models <- caretList(x = xTrain[, -20], y = yTrain, 
-                    trControl=control,
-                    preProc=c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
-                    methodList=model_list)
+                    trControl = control,
+                    preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
+                    methodList = model_list)
 
 
 ##############caretStack #######################
 
 # stack using glm
-stackControl <- trainControl(method="repeatedcv", number=10, repeats=3,
-                             savePredictions=TRUE)
+stackControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3,
+                             savePredictions = TRUE)
 set.seed(seed)
-stack.glm <- caretStack(models, method="glm",  
-                        preProc=c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
-                        trControl=stackControl)
+stack.glm <- caretStack(models, method = "glm",  
+                        preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
+                        trControl = stackControl)
 print(stack.glm)
 summary(stack.glm)
 
 # stack using random forest
 set.seed(seed)
-stack.rf <- caretStack(models, method="rf",
-                       preProc=c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
-                       trControl=stackControl)
+stack.rf <- caretStack(models, method = "rf",
+                       preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
+                       trControl = stackControl)
 print(stack.rf)
 summary(stack.rf)
 
 # stack using rpart
 set.seed(seed)
-stack.rpart <- caretStack(models, method="rpart",
-                       preProc=c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
-                       trControl=stackControl)
+stack.rpart <- caretStack(models, method = "rpart",
+                       preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
+                       trControl = stackControl)
 print(stack.rpart)
 summary(stack.rpart)
 
 # stack using gbm #For combining, using ensemble methods is not recommended becasue of overfitting.
 set.seed(seed)
-stack.gbm <- caretStack(models, method="gbm",
-                           preProc=c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
-                           trControl=stackControl)
+stack.gbm <- caretStack(models, method = "gbm",
+                           preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
+                           trControl = stackControl)
 print(stack.gbm)
 summary(stack.gbm)
 
 # stack using cubist # For combining, using ensemble methods is not recommended becasue of overfitting.
 set.seed(seed)
-stack.cubist <- caretStack(models, method="cubist",
-                          preProc=c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
-                          trControl=stackControl)
+stack.cubist <- caretStack(models, method = "cubist",
+                          preProc = c("center", "scale", "YeoJohnson", "corr", "spatialSign", "knnImpute", "zv", "nzv"), 
+                          trControl = stackControl)
 print(stack.cubist)
 summary(stack.cubist)
 
 # use final model to make predictions on the test dataset
-greedy_ensemble <- caretEnsemble(models, metric="RMSE",
-                                 trControl=trainControl(number=6))
+greedy_ensemble <- caretEnsemble(models, metric = "RMSE",
+                                 trControl = trainControl(number = 6))
 
 summary(greedy_ensemble)
 
 
 # (a)
-predictions <- predict(greedy_ensemble, newdata=trans_val_x)
+predictions <- predict(greedy_ensemble, newdata = trans_val_x)
 
 # calculate RMSE
 rmse <- RMSE(predictions, val_y)
 print(rmse)
 
 #(b)
-predictions <- predict(stack.glm, newdata=trans_val_x)
+predictions <- predict(stack.glm, newdata = trans_val_x)
 
 # calculate RMSE
 rmse <- RMSE(predictions, val_y)
 print(rmse)
 
 #(c)
-predictions <- predict(stack.rf , newdata=trans_val_x)
+predictions <- predict(stack.rf , newdata = trans_val_x)
 
 # calculate RMSE
 rmse <- RMSE(predictions, val_y)
 print(rmse)
 
 #(d)
-predictions <- predict(stack.rpart , newdata=trans_val_x)
+predictions <- predict(stack.rpart , newdata = trans_val_x)
 
 # calculate RMSE
 rmse <- RMSE(predictions, val_y)
 print(rmse)
 
 #(e)
-predictions <- predict(stack.cubist , newdata=trans_val_x)
+predictions <- predict(stack.cubist , newdata = trans_val_x)
 
 # calculate RMSE
 rmse <- RMSE(predictions, val_y)
 print(rmse)
 
 # (f)
-predictions <- predict(stack.gbm , newdata=trans_val_x)
+predictions <- predict(stack.gbm , newdata = trans_val_x)
 
 # calculate RMSE
 rmse <- RMSE(predictions, val_y)
